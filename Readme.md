@@ -1,2 +1,6 @@
 
-![TEAM CHALLENGE](./Imagenes/portadaa.png)
+
+
+<div style="text-align:center;">
+    <img src="./Imagenes/portadaa.png" alt="Texto alternativo">
+</div>
