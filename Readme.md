@@ -45,10 +45,15 @@
 >> HDL: High Density Lipoprotein	
 >> Glyhb: Hemoglobina Glucosilada
 >> Ciudad: Dos ciudades, Lousia (Kentucky) y Buckingham (Buckinghamshire)
+
 >> Edad: 
+
 >> Sexo: Hombre / Mujer
+
 >> Peso:
+
 >> bp.1s: Presión arterial sistólica.
+
 >> bp.1d: Presión arterial diastólica.
 
 
