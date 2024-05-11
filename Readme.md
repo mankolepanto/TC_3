@@ -41,9 +41,13 @@
 > Columnas de nuestro DataFrame
 
 >> Col: Colesterol
+
 >> Gluc-Basal: Glucosa en reposo
+
 >> HDL: High Density Lipoprotein	
+
 >> Glyhb: Hemoglobina Glucosilada
+
 >> Ciudad: Dos ciudades, Lousia (Kentucky) y Buckingham (Buckinghamshire)
 
 >> Edad: 
