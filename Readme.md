@@ -12,9 +12,9 @@
 
 ## Funciones y explicación de las mismas:
 
->> Describe
+>> **Describe**
 
->> >> Esta función nos sirve para obtener información util de un df como el tipado de sus columnas, los missings, los valores únicos y la cardinalidad.
+>> Esta función nos sirve para obtener información util de un df como el tipado de sus columnas, los missings, los valores únicos y la cardinalidad.
 
 >>
 
