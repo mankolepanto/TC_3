@@ -1,1 +1,1 @@
-![Portada](./imagenes/portada.jpg){: style="border-radius: 25px; width: 100%;"}
+![Portada](./imagenes/portadaa.png)
