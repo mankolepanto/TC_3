@@ -1,4 +1,4 @@
-chol,stab.glu,hdl,glyhb,location,age,gender,weight,bp.1s,bp.1d
+Col,Gluc-Basal,HDL,Glyhb,Ciudad,Edad,Sexo,Peso,bp.1s,bp.1d
 203.0,82,56.0,4.3099999428,Buckingham,46,female,121.0,118.0,59.0
 165.0,97,24.0,4.4400000572,Buckingham,29,female,218.0,112.0,68.0
 228.0,92,37.0,4.6399998665,Buckingham,58,female,256.0,190.0,92.0

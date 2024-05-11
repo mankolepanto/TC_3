@@ -36,6 +36,22 @@
 
 >> Esta función plot_features_cat_regression toma un DataFrame, una columna objetivo (target_col), y una lista de columnas categóricas (columns). Utiliza pruebas de chi-cuadrado para evaluar la relación entre cada columna categórica y la columna objetivo. Si la relación es significativa (según un valor pvalue dado), muestra un histograma agrupado para visualizar la relación. La función devuelve las columnas categóricas que cumplen con los criterios de significancia.
 
+## Data
+
+> Columnas de nuestro DataFrame
+
+>> Col: Colesterol
+>> Gluc-Basal: Glucosa en reposo
+>> HDL: High Density Lipoprotein	
+>> Glyhb: Hemoglobina Glucosilada
+>> Ciudad: Dos ciudades, Lousia (Kentucky) y Buckingham (Buckinghamshire)
+>> Edad: 
+>> Sexo: Hombre / Mujer
+>> Peso:
+>> bp.1s: Presión arterial sistólica.
+>> bp.1d: Presión arterial diastólica.
+
+
 ## TEST
 
 - Se va a utilizar un Dataset obtenido de Kaggle en el que podemos encontrar varios marcadores de salud. Con este dataset vamos a mostrar el buen funcionamiento de nuestras funciones y podremos observar el desarrollo de las mismas.
