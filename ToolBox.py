@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from scipy import stats
 from scipy.stats import pearsonr
 from scipy.stats import chi2_contingency
+from scipy.stats import f_oneway
+from sklearn.metrics import mean_squared_error, mean_absolute_error, accuracy_score, precision_score, recall_score, classification_report, confusion_matrix, ConfusionMatrixDisplay
 
 
 def describe_df(df):
@@ -295,3 +297,164 @@ def plot_features_cat_regression(dataframe, target_col="", columns=[], pvalue=0.
                 plt.show()
     
     return selected_columns
+
+
+
+'''ToolBox II'''
+
+
+def eval_model(target, predictions, problem_type, metrics):
+    """
+    Evalúa el rendimiento de un modelo de Machine Learning según las métricas especificadas.
+    
+    Argumentos:
+    target: Lista de valores reales del target.
+    predictions: Lista de valores predichos por el modelo.
+    problem_type (str): Tipo de problema ('regression' o 'classification').
+    metrics: Lista de métricas a calcular.
+    
+    Retorna:
+    tuple: Tupla con los valores de las métricas en el orden de aparición en la lista de entrada.
+    """
+    results = []
+    
+    # Funciones auxiliares para las métricas de regresión
+    def calculate_rmse(target, predictions):
+        return np.sqrt(mean_squared_error(target, predictions))
+    
+    def calculate_mae(target, predictions):
+        return mean_absolute_error(target, predictions)
+    
+    def calculate_mape(target, predictions):
+        if np.any(target == 0):
+            raise ValueError("MAPE no se puede calcular con valores de target igual a 0")
+        return np.mean(np.abs((target - predictions) / target)) * 100
+    
+    # Funciones auxiliares para métricas de clasificación
+    def calculate_accuracy(target, predictions):
+        return accuracy_score(target, predictions)
+    
+    def calculate_precision(target, predictions, average='macro'):
+        return precision_score(target, predictions, average=average)
+    
+    def calculate_recall(target, predictions, average='macro'):
+        return recall_score(target, predictions, average=average)
+    
+    # Procesamiento de métricas según el tipo de problema
+    if problem_type == 'regression':
+        for metric in metrics:
+            if metric == 'RMSE':
+                rmse = calculate_rmse(target, predictions)
+                print(f"RMSE: {rmse}")
+                results.append(rmse)
+            elif metric == 'MAE':
+                mae = calculate_mae(target, predictions)
+                print(f"MAE: {mae}")
+                results.append(mae)
+            elif metric == 'MAPE':
+                try:
+                    mape = calculate_mape(target, predictions)
+                    print(f"MAPE: {mape}")
+                    results.append(mape)
+                except ValueError as e:
+                    print(e)
+            elif metric == 'GRAPH':
+                plt.scatter(target, predictions)
+                plt.xlabel('Actual')
+                plt.ylabel('Predicted')
+                plt.title('Actual vs Predicted')
+                plt.show()
+    
+    elif problem_type == 'classification':
+        for metric in metrics:
+            if metric == 'ACCURACY':
+                accuracy = calculate_accuracy(target, predictions)
+                print(f"Accuracy: {accuracy}")
+                results.append(accuracy)
+            elif metric == 'PRECISION':
+                precision = calculate_precision(target, predictions)
+                print(f"Precision: {precision}")
+                results.append(precision)
+            elif metric == 'RECALL':
+                recall = calculate_recall(target, predictions)
+                print(f"Recall: {recall}")
+                results.append(recall)
+            elif metric == 'CLASS_REPORT':
+                report = classification_report(target, predictions)
+                print("Classification Report:\n", report)
+            elif metric == 'MATRIX':
+                matrix = confusion_matrix(target, predictions)
+                display = ConfusionMatrixDisplay(confusion_matrix=matrix)
+                display.plot()
+                plt.show()
+            elif metric == 'MATRIX_RECALL':
+                display = ConfusionMatrixDisplay.from_predictions(target, predictions, normalize='true')
+                display.plot()
+                plt.show()
+            elif metric == 'MATRIX_PRED':
+                display = ConfusionMatrixDisplay.from_predictions(target, predictions, normalize='pred')
+                display.plot()
+                plt.show()
+            elif 'PRECISION_' in metric:
+                class_label = metric.split('_')[1]
+                precision = precision_score(target, predictions, labels=[class_label], average='macro', zero_division=0)
+                if precision == 0:
+                    raise ValueError(f"Etiqueta {class_label} no encontrada en target")
+                print(f"Precision for class {class_label}: {precision}")
+                results.append(precision)
+            elif 'RECALL_' in metric:
+                class_label = metric.split('_')[1]
+                recall = recall_score(target, predictions, labels=[class_label], average='macro', zero_division=0)
+                if recall == 0:
+                    raise ValueError(f"Etiqueta {class_label} no encontrada en target")
+                print(f"Recall for class {class_label}: {recall}")
+                results.append(recall)
+    
+    return tuple(results)
+
+
+
+def get_features_num_classification(df, target_col, pvalue=0.05):
+    """
+    Selecciona columnas numéricas cuyo ANOVA con la columna target supere un nivel de significación.
+    
+    Argumentos:
+    df (pd.DataFrame): DataFrame de entrada.
+    target_col (str): Nombre de la columna target.
+    pvalue (float): Nivel de significación para el test de ANOVA. Por defecto 0.05.
+    
+    Retorna:
+    list: Lista de columnas numéricas que cumplen con el criterio de ANOVA.
+    """
+    # Comprobaciones de los argumentos de entrada
+    if not isinstance(df, pd.DataFrame):
+        print("El argumento 'df' no es un DataFrame.")
+        return None
+    if target_col not in df.columns:
+        print(f"La columna '{target_col}' no existe en el DataFrame.")
+        return None
+    if not pd.api.types.is_categorical_dtype(df[target_col]) and not pd.api.types.is_object_dtype(df[target_col]):
+        print(f"La columna '{target_col}' no es categórica.")
+        return None
+    if not isinstance(pvalue, float) or not (0 < pvalue < 1):
+        print("El argumento 'pvalue' debe ser un float entre 0 y 1.")
+        return None
+    
+    # Convertir target_col a categórica si no lo es
+    if not pd.api.types.is_categorical_dtype(df[target_col]):
+        df[target_col] = df[target_col].astype('category')
+    
+    # Filtrar columnas numéricas
+    numeric_cols = df.select_dtypes(include=[float, int]).columns.tolist()
+    significant_features = []
+    
+    # Realizar el test ANOVA
+    for col in numeric_cols:
+        groups = [df[df[target_col] == cat][col].dropna() for cat in df[target_col].cat.categories]
+        if all(len(group) > 0 for group in groups):
+            _, p_val = f_oneway(*groups)
+            if p_val < (1 - pvalue):
+                significant_features.append(col)
+    
+    return significant_features
+
