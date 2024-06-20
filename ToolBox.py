@@ -458,3 +458,219 @@ def get_features_num_classification(df, target_col, pvalue=0.05):
     
     return significant_features
 
+
+def plot_features_num_classification(df, target_col="", columns=[], pvalue=0.05):
+    """
+    Genera pairplots de columnas numéricas significativas basadas en ANOVA para clasificación.
+
+    Esta función toma un DataFrame, una columna objetivo categórica y una lista de columnas numéricas, 
+    y genera pairplots de las columnas numéricas que tienen una relación significativa con la columna 
+    objetivo según el test de ANOVA. Si la lista de columnas está vacía, se consideran todas las columnas 
+    numéricas del DataFrame.
+
+    Argumentos:
+    df (pd.DataFrame): DataFrame de entrada.
+    target_col (str): Nombre de la columna objetivo categórica.
+    columns (list): Lista de nombres de columnas numéricas a considerar. Por defecto es una lista vacía.
+    pvalue (float): Nivel de significación para el test de ANOVA. Por defecto 0.05.
+
+    Retorna:
+    list: Lista de columnas numéricas que cumplen con el criterio de ANOVA.
+    """
+
+
+    # Verificamos si target_col está en el dataframe
+    if target_col not in df.columns:
+        print("Error: 'target_col' no está en el dataframe.")
+        return None
+    
+    # Verificamos si target_col es categórica
+    if not pd.api.types.is_categorical_dtype(df[target_col]) and not pd.api.types.is_object_dtype(df[target_col]):
+        print("Error: 'target_col' debe ser una variable categórica.")
+        return None
+    
+    # Si la lista columns está vacía, tomamos todas las columnas numéricas
+    if not columns:
+        columns = df.select_dtypes(include=[np.number]).columns.tolist()
+    
+    # Verificamos si las columnas están en el dataframe y son numéricas
+    for col in columns:
+        if col not in df.columns:
+            print(f"Error: La columna '{col}' no está en el dataframe.")
+            return None
+        if not pd.api.types.is_numeric_dtype(df[col]):
+            print(f"Error: La columna '{col}' no es numérica.")
+            return None
+
+    # Filtramos las columnas basándonos en el test de ANOVA
+    columnas_significativas = []
+    categorias_target = df[target_col].dropna().unique()
+    if len(categorias_target) < 2:
+        print("Error: 'target_col' debe tener al menos dos valores únicos.")
+        return None
+
+    for col in columns:
+        grupos = [df[df[target_col] == categoria][col].dropna() for categoria in categorias_target]
+        if len(grupos) > 1 and all(len(grupo) > 1 for grupo in grupos):
+            estadistico_f, valor_p = f_oneway(*grupos)
+            if valor_p < pvalue:
+                columnas_significativas.append(col)
+
+    if not columnas_significativas:
+        print("No hay columnas que pasen el test de ANOVA.")
+        return []
+
+    # Definimos el número de valores por gráfico para las categorías del target
+    max_valores_target_por_grafico = 5
+    max_columnas_por_grafico = 5
+
+    divisiones_target = [categorias_target[i:i + max_valores_target_por_grafico] for i in range(0, len(categorias_target), max_valores_target_por_grafico)]
+    divisiones_columnas = [columnas_significativas[i:i + max_columnas_por_grafico] for i in range(0, len(columnas_significativas), max_columnas_por_grafico)]
+
+    # Creamos los pairplots
+    for division_target in divisiones_target:
+        for division_columnas in divisiones_columnas:
+            subset_df = df[df[target_col].isin(division_target)]
+            columnas_para_graficar = division_columnas + [target_col]
+            sns.pairplot(subset_df[columnas_para_graficar], hue=target_col)
+            plt.show()
+
+    return columnas_significativas
+
+
+import pandas as pd
+from sklearn.feature_selection import mutual_info_classif
+
+def get_features_cat_classification(df, target_col, normalize=False, mi_threshold=0.0):
+    """
+    Selecciona columnas categóricas cuyo valor de mutual information con la columna target supere un umbral.
+
+    Argumentos:
+    df (pd.DataFrame): DataFrame de entrada.
+    target_col (str): Nombre de la columna target.
+    normalize (bool): Si es True, se normaliza el valor de mutual information. Por defecto es False.
+    mi_threshold (float): Umbral para el valor de mutual information. Por defecto es 0.
+
+    Retorna:
+    list: Lista de columnas categóricas que cumplen con el criterio de mutual information.
+    """
+    
+    # Verificamos si target_col está en el dataframe
+    if target_col not in df.columns:
+        print("Error: 'target_col' no está en el dataframe.")
+        return None
+    
+    # Verificamos si target_col es categórica o numérica discreta con baja cardinalidad
+    if not (pd.api.types.is_categorical_dtype(df[target_col]) or pd.api.types.is_object_dtype(df[target_col]) or 
+            (pd.api.types.is_numeric_dtype(df[target_col]) and df[target_col].nunique() < 20)):
+        print("Error: 'target_col' debe ser una variable categórica o numérica discreta con baja cardinalidad.")
+        return None
+    
+    # Verificamos si mi_threshold es un float válido
+    if not isinstance(mi_threshold, float):
+        print("Error: 'mi_threshold' debe ser un valor float.")
+        return None
+
+    # Si normalize es True, verificamos que mi_threshold esté entre 0 y 1
+    if normalize and not (0 <= mi_threshold <= 1):
+        print("Error: 'mi_threshold' debe estar entre 0 y 1 cuando 'normalize' es True.")
+        return None
+    
+    # Seleccionamos las columnas categóricas
+    cols_categoricas = df.select_dtypes(include=['category', 'object']).columns.tolist()
+    
+    # Calculamos la mutual information para las columnas categóricas
+    mi_scores = mutual_info_classif(df[cols_categoricas], df[target_col], discrete_features=True)
+
+    if normalize:
+        # Normalizamos los valores de mutual information
+        mi_scores /= mi_scores.sum()
+    
+    # Seleccionamos las columnas que cumplen con el umbral
+    columnas_significativas = [col for col, mi in zip(cols_categoricas, mi_scores) if mi >= mi_threshold]
+
+    return columnas_significativas
+
+
+
+def plot_features_cat_classification(df, target_col="", columns=[], mi_threshold=0.0, normalize=False):
+    """
+    Genera gráficos de distribución para columnas categóricas significativas basadas en mutual information.
+
+    Esta función toma un DataFrame, una columna objetivo categórica y una lista de columnas categóricas, 
+    y genera gráficos de distribución de las columnas categóricas que tienen una relación significativa con la columna 
+    objetivo según el valor de mutual information. Si la lista de columnas está vacía, se consideran todas las columnas 
+    categóricas del DataFrame.
+
+    Argumentos:
+    df (pd.DataFrame): DataFrame de entrada.
+    target_col (str): Nombre de la columna objetivo categórica.
+    columns (list): Lista de nombres de columnas categóricas a considerar. Por defecto es una lista vacía.
+    mi_threshold (float): Umbral para el valor de mutual information. Por defecto es 0.0.
+    normalize (bool): Si es True, se normaliza el valor de mutual information. Por defecto es False.
+
+    Retorna:
+    list: Lista de columnas categóricas que cumplen con el criterio de mutual information.
+    """
+
+    # Verificamos si target_col está en el dataframe
+    if target_col not in df.columns:
+        print("Error: 'target_col' no está en el dataframe.")
+        return None
+    
+    # Verificamos si target_col es categórica o numérica discreta con baja cardinalidad
+    if not (pd.api.types.is_categorical_dtype(df[target_col]) or pd.api.types.is_object_dtype(df[target_col]) or 
+            (pd.api.types.is_numeric_dtype(df[target_col]) and df[target_col].nunique() < 20)):
+        print("Error: 'target_col' debe ser una variable categórica o numérica discreta con baja cardinalidad.")
+        return None
+    
+    # Verificamos si mi_threshold es un float válido
+    if not isinstance(mi_threshold, float):
+        print("Error: 'mi_threshold' debe ser un valor float.")
+        return None
+
+    # Si normalize es True, verificamos que mi_threshold esté entre 0 y 1
+    if normalize and not (0 <= mi_threshold <= 1):
+        print("Error: 'mi_threshold' debe estar entre 0 y 1 cuando 'normalize' es True.")
+        return None
+    
+    # Si la lista columns está vacía, tomamos todas las columnas categóricas
+    if not columns:
+        columns = df.select_dtypes(include=['category', 'object']).columns.tolist()
+    
+    # Verificamos si las columnas están en el dataframe y son categóricas
+    for col in columns:
+        if col not in df.columns:
+            print(f"Error: La columna '{col}' no está en el dataframe.")
+            return None
+        if not (pd.api.types.is_categorical_dtype(df[col]) or pd.api.types.is_object_dtype(df[col])):
+            print(f"Error: La columna '{col}' no es categórica.")
+            return None
+
+    # Calculamos la mutual information para las columnas categóricas
+    mi_scores = mutual_info_classif(df[columns], df[target_col], discrete_features=True)
+
+    if normalize:
+        # Normalizamos los valores de mutual information
+        mi_scores /= mi_scores.sum()
+    
+    # Seleccionamos las columnas que cumplen con el umbral
+    columnas_significativas = [col for col, mi in zip(columns, mi_scores) if mi >= mi_threshold]
+
+    if not columnas_significativas:
+        print("No hay columnas que pasen el umbral de mutual information.")
+        return []
+
+    # Graficamos la distribución de etiquetas para cada columna significativa
+    for col in columnas_significativas:
+        plt.figure(figsize=(10, 6))
+        sns.countplot(data=df, x=col, hue=target_col)
+        plt.title(f'Distribución de {col} respecto a {target_col}')
+        plt.xlabel(col)
+        plt.ylabel('Frecuencia')
+        plt.xticks(rotation=45)
+        plt.legend(title=target_col)
+        plt.show()
+
+    return columnas_significativas
+
