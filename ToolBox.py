@@ -541,7 +541,7 @@ def plot_features_num_classification(df, target_col="", columns=[], pvalue=0.05)
 import pandas as pd
 from sklearn.feature_selection import mutual_info_classif
 
-def get_features_cat_classification(df, target_col, normalize=False, mi_threshold=0.0):
+def get_features_cat_classification_2(df, target_col, normalize=False, mi_threshold=0.0):
     """
     Selecciona columnas categóricas cuyo valor de mutual information con la columna target supere un umbral.
 
@@ -576,18 +576,24 @@ def get_features_cat_classification(df, target_col, normalize=False, mi_threshol
         print("Error: 'mi_threshold' debe estar entre 0 y 1 cuando 'normalize' es True.")
         return None
     
-    # Seleccionamos las columnas categóricas
-    cols_categoricas = df.select_dtypes(include=['category', 'object']).columns.tolist()
+    # Convertir columnas categóricas a códigos numéricos
+    le = LabelEncoder()
+    df_categorical = df.select_dtypes(include=['category', 'object'])
+    df_categorical_encoded = df_categorical.apply(lambda x: le.fit_transform(x))
     
-    # Calculamos la mutual information para las columnas categóricas
-    mi_scores = mutual_info_classif(df[cols_categoricas], df[target_col], discrete_features=True)
+    # Unir las columnas categóricas convertidas con las columnas numéricas originales
+    df_encoded = pd.concat([df.drop(df_categorical.columns, axis=1), df_categorical_encoded], axis=1)
+    
+    # Calculamos la mutual information para las columnas categóricas convertidas
+    cols_categoricas_encoded = df_categorical_encoded.columns.tolist()
+    mi_scores = mutual_info_classif(df_encoded[cols_categoricas_encoded], df_encoded[target_col], discrete_features=True)
 
     if normalize:
         # Normalizamos los valores de mutual information
         mi_scores /= mi_scores.sum()
     
     # Seleccionamos las columnas que cumplen con el umbral
-    columnas_significativas = [col for col, mi in zip(cols_categoricas, mi_scores) if mi >= mi_threshold]
+    columnas_significativas = [col for col, mi in zip(cols_categoricas_encoded, mi_scores) if mi >= mi_threshold]
 
     return columnas_significativas
 
